@@ -10,6 +10,9 @@ BEGIN
     DECLARE vAPPLYING_ID INT;
     DECLARE vAPPLYING_NAME CHAR(255);
 
+    DECLARE vCONTENT_ID INT;
+    DECLARE vCONTENT_NAME CHAR(255);
+
     DECLARE vIMAGE_POSITION INT;
 
 	DECLARE curapplyings CURSOR FOR
@@ -23,14 +26,27 @@ BEGIN
     ORDER BY A.id,
         A.name;
 
+	DECLARE curcontents CURSOR FOR
+    SELECT C.id,
+        C.name
+    FROM contents_products CP
+        JOIN contents C
+            ON CP.contents_id = C.id
+    GROUP BY C.id,
+        C.name
+    ORDER BY C.id,
+        C.name;
+
 	DECLARE curimages CURSOR FOR
     SELECT DISTINCT I.image_position
-    FROM ttr_images I
+    FROM ttr_image I
     ORDER BY I.image_position;
 
-	DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
+    DECLARE CONTINUE HANDLER FOR SQLSTATE '02000' SET done = 1;
 
+    -- -------------------------------------------------------------------------
     -- Основные данные
+    -- -------------------------------------------------------------------------
     DROP TEMPORARY TABLE IF EXISTS ttr_product;
     CREATE TEMPORARY TABLE ttr_product
     SELECT
@@ -87,7 +103,9 @@ BEGIN
             AND CE.lang = 'en'
     GROUP BY P.id;
     CREATE INDEX idx_ttr_product ON ttr_product(id);
-
+    -- -------------------------------------------------------------------------
+    -- Основные данные
+    -- -------------------------------------------------------------------------
 
     -- -------------------------------------------------------------------------
     -- Применение
@@ -181,5 +199,43 @@ BEGIN
     -- -------------------------------------------------------------------------
     -- Картинки
     -- -------------------------------------------------------------------------
+
+    -- -------------------------------------------------------------------------
+    -- Состав
+    -- -------------------------------------------------------------------------
+    SET @SQLS_CONTENT = '';
+    SET done = 0;
+    OPEN curcontents;
+    FETCH curcontents INTO vCONTENT_ID, vCONTENT_NAME;
+    WHILE done = 0 DO 
+
+        SET @SQLS_CONTENT = CONCAT (@SQLS_CONTENT,
+            ',MAX(IF(C.id = ', vCONTENT_ID, ', C.name, NULL)) AS content_', vCONTENT_ID);
+
+        SET done = 0;
+        FETCH curcontents INTO vCONTENT_ID, vCONTENT_NAME;
+    END WHILE;
+    CLOSE curcontents;
+
+    DROP TEMPORARY TABLE IF EXISTS ttr_product_content;
+    SET @SQLS = CONCAT('CREATE TEMPORARY TABLE ttr_product_content AS
+    SELECT CP.product_id AS content_product_id
+        ',
+        @SQLS_CONTENT,
+        '
+    FROM contents_products CP
+        JOIN contents C
+            ON CP.contents_id = C.id
+    GROUP BY CP.product_id');
+
+    PREPARE STMT FROM @SQLS;
+    EXECUTE STMT;
+    DEALLOCATE PREPARE STMT;
+
+    CREATE INDEX idx_ttr_product_content ON ttr_product_content(CONTENT_PRODUCT_ID);
+    -- -------------------------------------------------------------------------
+    -- Состав
+    -- -------------------------------------------------------------------------
+
 
 END $$
