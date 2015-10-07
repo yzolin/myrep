@@ -1,3 +1,8 @@
+/**
+ * Процедура выгрузки данных о товарах в файл csv
+ * 
+ * @author yzolin
+ */
 use shop;
 
 DELIMITER $$
@@ -146,8 +151,6 @@ BEGIN
         'l_text_n' AS l_text_n,
         'l_gvk_en' AS l_gvk_en,
         'l_contents_text_en' AS l_contents_text_en;
-
-
     -- -------------------------------------------------------------------------
     -- Основные данные
     -- -------------------------------------------------------------------------
@@ -386,7 +389,7 @@ BEGIN
     FROM ttr_product P
         LEFT JOIN ttr_product_apllying A
             ON P.Id = A.APPLYING_PRODUCT_ID
-        LEFT JOIN ttr_product_image I 
+        LEFT JOIN ttr_product_image I
             ON P.Id = I.IMAGE_PRODUCT_ID
         LEFT JOIN ttr_product_content C
             ON P.Id = C.CONTENT_PRODUCT_ID
