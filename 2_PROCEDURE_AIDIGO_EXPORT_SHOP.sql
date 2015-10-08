@@ -166,7 +166,7 @@ BEGIN
     WHILE done = 0 DO 
 
         SET @SQLS_APPLYING = CONCAT (@SQLS_APPLYING,
-            ',MAX(IF(A.id = ', vAPPLYING_ID, ', A.name, NULL)) AS applying_', vAPPLYING_ID);
+            ',IFNULL(MAX(IF(A.id = ', vAPPLYING_ID, ', A.name, NULL)), '''') AS applying_', vAPPLYING_ID);
 
         SET @SQLS_APPLYING_HEADER = CONCAT (@SQLS_APPLYING_HEADER,
             ',''', vAPPLYING_NAME,''' AS applying_', vAPPLYING_ID);
@@ -178,14 +178,16 @@ BEGIN
 
     DROP TEMPORARY TABLE IF EXISTS ttr_product_apllying;
     SET @SQLS = CONCAT('CREATE TEMPORARY TABLE ttr_product_apllying AS
-    SELECT AP.product_id AS applying_product_id
+    SELECT P.id AS applying_product_id
         ',
         @SQLS_APPLYING,
         '
-    FROM applyings_products AP
-        JOIN applyings A
+    FROM products P
+        LEFT JOIN applyings_products AP
+            ON P.id = AP.product_id
+        LEFT JOIN applyings A
             ON AP.applying_id = A.id
-    GROUP BY AP.product_id');
+    GROUP BY P.id');
 
     PREPARE STMT FROM @SQLS;
     EXECUTE STMT;
@@ -230,6 +232,7 @@ BEGIN
         I.model_id,
         I.position,
         I.name) Z;
+    CREATE INDEX idx_ttr_image ON ttr_image(product_id);
 
     SET @SQLS_IMAGES = '';
     SET @SQLS_IMAGES_HEADER = '';
@@ -239,7 +242,7 @@ BEGIN
     WHILE done = 0 DO 
 
         SET @SQLS_IMAGES = CONCAT (@SQLS_IMAGES,
-            ',MAX(IF(I.image_position = ', vIMAGE_POSITION, ', I.name, NULL)) AS image_', vIMAGE_POSITION);
+            ',IFNULL(MAX(IF(I.image_position = ', vIMAGE_POSITION, ', I.name, NULL)), '''') AS image_', vIMAGE_POSITION);
 
         SET @SQLS_IMAGES_HEADER = CONCAT (@SQLS_IMAGES_HEADER,
             ',''image_', vIMAGE_POSITION,''' AS image_', vIMAGE_POSITION);
@@ -251,12 +254,14 @@ BEGIN
 
     DROP TEMPORARY TABLE IF EXISTS ttr_product_image;
     SET @SQLS = CONCAT('CREATE TEMPORARY TABLE ttr_product_image AS
-    SELECT I.product_id AS image_product_id
+    SELECT P.id AS image_product_id
         ',
         @SQLS_IMAGES,
         '
-    FROM ttr_image I
-    GROUP BY I.product_id');
+    FROM products P
+        LEFT JOIN ttr_image I
+            ON P.id = I.product_id
+    GROUP BY P.id');
 
     PREPARE STMT FROM @SQLS;
     EXECUTE STMT;
@@ -289,7 +294,7 @@ BEGIN
     WHILE done = 0 DO 
 
         SET @SQLS_CONTENT = CONCAT (@SQLS_CONTENT,
-            ',MAX(IF(C.id = ', vCONTENT_ID, ', C.name, NULL)) AS content_', vCONTENT_ID);
+            ',IFNULL(MAX(IF(C.id = ', vCONTENT_ID, ', C.name, NULL)), '''') AS content_', vCONTENT_ID);
 
         SET @SQLS_CONTENT_HEADER = CONCAT (@SQLS_CONTENT_HEADER,
             ',''', vCONTENT_NAME,''' AS content_', vCONTENT_ID);
@@ -301,14 +306,16 @@ BEGIN
 
     DROP TEMPORARY TABLE IF EXISTS ttr_product_content;
     SET @SQLS = CONCAT('CREATE TEMPORARY TABLE ttr_product_content AS
-    SELECT CP.product_id AS content_product_id
+    SELECT P.id AS content_product_id
         ',
         @SQLS_CONTENT,
         '
-    FROM contents_products CP
-        JOIN contents C
+    FROM products P
+        LEFT JOIN contents_products CP
+            ON P.id = CP.product_id
+        LEFT JOIN contents C
             ON CP.contents_id = C.id
-    GROUP BY CP.product_id');
+    GROUP BY P.id');
 
     PREPARE STMT FROM @SQLS;
     EXECUTE STMT;
